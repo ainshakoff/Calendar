@@ -92,6 +92,49 @@
   .footer-info { font-family: 'Inter', sans-serif; font-size: 12px; color: rgba(255,255,255,0.4); letter-spacing: 0.5px; }
   .footer-season { font-family: 'Montserrat', sans-serif; font-style: normal; font-weight: 700; font-size: 13px; color: rgba(255,255,255,0.3); letter-spacing: 2px; text-transform: uppercase; }
 
+  /* CALENDAR */
+  .cal-section { padding: 0 48px 64px; }
+  .cal-header-row { display: flex; align-items: center; gap: 16px; padding: 40px 0 24px; }
+  .cal-header-row span { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; color: var(--gray); }
+  .cal-header-row::after { content: ''; flex: 1; height: 1px; background: #E0E0E0; }
+
+  .cal-legend { display: flex; gap: 24px; margin-bottom: 28px; flex-wrap: wrap; }
+  .leg-item { display: flex; align-items: center; gap: 8px; font-family: 'Inter', sans-serif; font-size: 12px; color: var(--gray); }
+  .leg-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+  .leg-dot.main { background: var(--blue); }
+  .leg-dot.bonus { background: var(--dark); }
+  .leg-dot.weekend { background: #E8E8E8; border: 1px solid #D0D0D0; }
+
+  .cal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; background: #E0E0E0; border: 2px solid #E0E0E0; }
+
+  .cal-month { background: var(--white); padding: 24px; }
+  .cal-month-name { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 15px; color: var(--dark); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
+
+  .cal-days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cal-dow { font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 600; color: var(--gray); text-align: center; padding: 4px 0 8px; letter-spacing: 0.5px; }
+  .cal-dow:nth-child(6), .cal-dow:nth-child(7) { color: #C0C0C0; }
+
+  .cal-day { position: relative; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 50%; }
+  .cal-day.empty { background: transparent; }
+  .cal-day .day-num { font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; color: var(--dark); line-height: 1; }
+  .cal-day.wknd .day-num { color: #C0C0C0; }
+  .cal-day.wknd { background: transparent; }
+
+  .cal-day.evt { border-radius: 50%; width: 100%; }
+  .cal-day.evt-main { background: var(--blue); }
+  .cal-day.evt-main .day-num { color: var(--white); }
+  .cal-day.evt-bonus { background: var(--dark); }
+  .cal-day.evt-bonus .day-num { color: var(--white); }
+  .cal-day .evt-label { font-family: 'Montserrat', sans-serif; font-weight: 700; font-size: 8px; color: rgba(255,255,255,0.85); line-height: 1; margin-top: 1px; }
+
+  @media (max-width: 768px) {
+    .cal-grid { grid-template-columns: repeat(2, 1fr); }
+    .cal-section { padding-left: 24px; padding-right: 24px; }
+  }
+  @media (max-width: 480px) {
+    .cal-grid { grid-template-columns: 1fr; }
+  }
+
   @media (max-width: 600px) {
     .header, .content { padding-left: 24px; padding-right: 24px; }
     .footer { padding: 24px; }
@@ -260,6 +303,78 @@
 
   </div>
 </div>
+
+<div class="cal-section">
+  <div class="cal-header-row">
+    <span>Сезонный календарь</span>
+  </div>
+  <div class="cal-legend">
+    <span class="leg-item"><span class="leg-dot main"></span>Основной этап</span>
+    <span class="leg-item"><span class="leg-dot bonus"></span>Вне зачёта</span>
+    <span class="leg-item"><span class="leg-dot weekend"></span>Выходные</span>
+  </div>
+  <div class="cal-grid" id="cal-grid"></div>
+</div>
+
+<script>
+const events = {
+  "2026-04-24": { type: "main", label: "01", name: "Miks Karting" },
+  "2026-05-22": { type: "main", label: "02", name: "ЦТВС" },
+  "2026-06-18": { type: "main", label: "03", name: "Руднево" },
+  "2026-06-28": { type: "bonus", label: "Б1", name: "Атрон" },
+  "2026-07-16": { type: "main", label: "04", name: "ADM Мячково" },
+  "2026-08-06": { type: "main", label: "05", name: "ЦТВС(обр)" },
+  "2026-09-04": { type: "main", label: "06", name: "Руднево" },
+  "2026-09-06": { type: "bonus", label: "Б3", name: "Атрон" },
+  "2026-09-24": { type: "main", label: "07", name: "Руднево Indoor" },
+};
+
+const monthNames = ["Апрель","Май","Июнь","Июль","Август","Сентябрь"];
+const dayNames = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
+
+const grid = document.getElementById("cal-grid");
+
+for (let m = 3; m <= 8; m++) {
+  const year = 2026;
+  const monthLabel = monthNames[m - 3];
+  const firstDay = new Date(year, m, 1);
+  const lastDay = new Date(year, m + 1, 0).getDate();
+  let startDow = firstDay.getDay(); // 0=Sun
+  startDow = startDow === 0 ? 6 : startDow - 1; // Mon=0
+
+  const block = document.createElement("div");
+  block.className = "cal-month";
+
+  let html = `<div class="cal-month-name">${monthLabel}</div>`;
+  html += `<div class="cal-days-grid">`;
+  dayNames.forEach(d => { html += `<div class="cal-dow">${d}</div>`; });
+
+  for (let i = 0; i < startDow; i++) {
+    html += `<div class="cal-day empty"></div>`;
+  }
+
+  for (let d = 1; d <= lastDay; d++) {
+    const dateStr = `${year}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dow = new Date(year, m, d).getDay(); // 0=Sun,6=Sat
+    const isWeekend = dow === 0 || dow === 6;
+    const evt = events[dateStr];
+
+    let cls = "cal-day";
+    if (isWeekend) cls += " wknd";
+    if (evt) cls += " evt evt-" + evt.type;
+
+    if (evt) {
+      html += `<div class="${cls}" title="${evt.name}"><span class="day-num">${d}</span><span class="evt-label">${evt.label}</span></div>`;
+    } else {
+      html += `<div class="${cls}"><span class="day-num">${d}</span></div>`;
+    }
+  }
+
+  html += `</div>`;
+  block.innerHTML = html;
+  grid.appendChild(block);
+}
+</script>
 
 <div class="footer">
   <div class="footer-logo">
